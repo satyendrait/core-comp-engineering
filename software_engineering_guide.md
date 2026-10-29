@@ -1,121 +1,530 @@
-# Software Engineering Mastery Guide: OOP, Databases, and Design Patterns
+# Software Engineering & Backend Architecture Guide
 
-This comprehensive guide aggregates foundational and advanced concepts in software architecture, covering Object-Oriented Programming (OOP) in Java, the SOLID design principles, Database ACID vs. BASE properties, Data Normalization, and Core Design Patterns.
+A comprehensive, production-oriented reference manual covering Object-Oriented Programming (OOP), SOLID design principles, Database Systems (ACID vs. BASE), Database Normalization, and core Design Patterns implemented in Java.
 
 ---
 
-## ☕ 1. Object-Oriented Programming (OOP) in Java
+## ☕ 1. Object-Oriented Programming (OOP) Deep Dive
 
-Object-Oriented Programming organizes software design around **objects** (data/state) and **behaviors** (methods), rather than isolated procedural logic.
+Object-Oriented Programming (OOP) is a paradigm centered around **objects** (encapsulating state) and **behaviors** (methods), rather than isolated procedural logic. 
 
-### Foundational Blocks
-*   **Class:** A structural blueprint or template defining variables and methods common to all objects of its type. It occupies no memory at runtime.
-*   **Object:** A concrete instance of a class. It resides in the JVM heap memory and maintains distinct state properties.
+### The Foundational Blocks: Classes and Objects
+* **Class:** A compile-time blueprint or template defining the structure and capabilities of a type. It occupies no heap memory.
+* **Object:** A concrete runtime instance allocated on the JVM heap via the `new` keyword.
+
+```java
+// The Blueprint (Class)
+public class Car {
+    String model; // State
+    int year;
+
+    void drive() { // Behavior
+        System.out.println(model + " is driving.");
+    }
+}
+
+// Execution and Instantiation
+public class Main {
+    public static void main(String[] args) {
+        Car myCar = new Car(); // Memory allocated on the heap
+        myCar.model = "Model 3";
+        myCar.drive();
+    }
+}
+```
+
+---
 
 ### The Four Pillars of OOP
 
 #### 1. Encapsulation (Data Hiding)
-*   **Concept:** Restricting direct access to an object's structural components by combining properties and methods into a single unit.
-*   **Java Mechanism:** Mark class variables as `private` and selectively expose entry or mutation parameters through public `getter` and `setter` methods.
+Restricts direct access to an object's internal fields by making variables `private` and exposing them exclusively via public accessors (`getters`) and mutators (`setters`). This guarantees state validation and protection against external corruption.
 
 ```java
 public class BankAccount {
-    private double balance; // Hidden internal state
+    private double balance; // Hidden data field
 
-    public double getBalance() { return this.balance; }
+    // Controlled Entry Point (Getter)
+    public double getBalance() {
+        return this.balance;
+    }
 
+    // Validation-backed modifier (Setter)
     public void deposit(double amount) {
-        if (amount > 0) { this.balance += amount; }
+        if (amount > 0) {
+            this.balance += amount;
+        }
     }
 }
 ```
 
 #### 2. Inheritance (Code Reusability)
-*   **Concept:** Deriving a new class (subclass) from an existing class (superclass) using the `extends` keyword, constructing an **"IS-A" relationship**.
-*   **Java Constraint:** Supports single, multilevel, and hierarchical inheritance with classes. **Multiple inheritance via classes is omitted** to bypass the "Diamond Problem"; interfaces must be used instead.
-
-#### 3. Polymorphism (Many Forms)
-*   **Compile-Time Polymorphism (Method Overloading):** Multiple methods within the same class possess identical naming structures but vary by argument signatures (count, type, or position).
-*   **Runtime Polymorphism (Method Overriding / Dynamic Method Dispatch):** A subclass provides an explicit variant of a method previously declared inside its superclass. 
+Establishes an **"IS-A"** relationship allowing a subclass to inherit the fields and behaviors of a parent superclass using the `extends` keyword. Java does not support multi-class inheritance to avoid structural ambiguity (the Diamond Problem); it enforces single-inheritance but allows multiple implementation via interfaces.
 
 ```java
-// Reference Type = Parent, Object Instance = Child (Upcasting)
-PaymentProcessor processor = new PayPalProcessor();
-processor.processPayment(50.00); // Resolved at runtime via JVM lookup
+// Superclass
+public class Vehicle {
+    protected String brand = "Generic";
+    
+    public void honk() {
+        System.out.println("Beep, beep!");
+    }
+}
+
+// Subclass inheriting capabilities
+public class ElectricCar extends Vehicle {
+    private int batteryCapacity = 100;
+    
+    public void displayBrand() {
+        System.out.println("Brand: " + this.brand); // Inherited field
+    }
+}
 ```
 
-#### 4. Abstraction (Complexity Hiding)
-*   **Concept:** Exposing only structural interfaces to users while masking backend algorithmic complexities. Focuses on *what* an object does rather than *how*.
-*   **Java Mechanism:** Abstract classes (partial abstraction supporting standard state fields) vs. Interfaces (complete contract-driven abstraction).
+#### 3. Polymorphism (Many Forms)
+Enables instructions to act differently based on contextual types.
+
+##### A. Compile-Time Polymorphism (Method Overloading)
+Methods in the same class share a name but differ in parameter signatures (count, types, or positioning). Resolved early by the compiler.
+
+```java
+public class MathOperations {
+    public int add(int a, int b) { return a + b; }
+    public double add(double a, double b) { return a + b; } // Overloaded signature
+}
+```
+
+##### B. Runtime Polymorphism (Dynamic Method Dispatch)
+A runtime resolution protocol where an overridden method is executed based on the target execution **object type**, not the variable's **reference type**. This relies strictly on **Upcasting**.
+
+```java
+// Base Class
+class PaymentProcessor {
+    void processPayment(double amount) {
+        System.out.println("Processing generic payment of $" + amount);
+    }
+}
+
+// Subclass A
+class CreditCardProcessor extends PaymentProcessor {
+    @Override
+    void processPayment(double amount) {
+        System.out.println("Charging $" + amount + " via Credit Card with a 2% processing fee.");
+    }
+}
+
+// Subclass B
+class PayPalProcessor extends PaymentProcessor {
+    @Override
+    void processPayment(double amount) {
+        System.out.println("Redirecting user to PayPal gateway to complete transaction of $" + amount);
+    }
+}
+
+// Execution Loop
+public class DispatchDemo {
+    public static void main(String[] args) {
+        // Upcasting: Reference type is parent, object type is subclass
+        PaymentProcessor processor = new CreditCardProcessor();
+        
+        // Compiler checks reference type (PaymentProcessor has processPayment)
+        // JVM checks object type (CreditCardProcessor is executing)
+        processor.processPayment(150.00); 
+        // Output: Charging $150.00 via Credit Card with a 2% processing fee.
+
+        // Dynamically reassigning the reference container
+        processor = new PayPalProcessor();
+        processor.processPayment(150.00);
+        // Output: Redirecting user to PayPal gateway to complete transaction of $150.00
+    }
+}
+```
+
+#### 4. Abstraction (Hiding Complexity)
+Separates the semantic context of *what* an object does from the explicit structural details of *how* it performs that action. Implemented using abstract classes or interfaces.
+
+```java
+// 100% Structural Abstraction
+public interface RemoteControl {
+    void pressPowerButton(); 
+}
+
+public class TVRemote implements RemoteControl {
+    @Override
+    public void pressPowerButton() {
+        System.out.println("Transmitting infrared signals to turn on the Television.");
+    }
+}
+```
 
 ---
 
-## 📐 2. SOLID Design Principles
+## 🛠️ 2. SOLID Design Principles
 
-Introduced by Robert C. Martin, these five architecture tenets guarantee that object-oriented code bases scale flexibly without becoming brittle as changes occur.
+### S: Single Responsibility Principle (SRP)
+> A class must serve one standalone operational scope. It should have only a single reason to change.
 
-*   **S - Single Responsibility Principle (SRP):** *A class should have one, and only one, reason to change.* Isolate data entities entirely from persistent storage or presentation engines.
-*   **O - Open/Closed Principle (OCP):** *Software entities should be open for extension, but closed for modification.* Utilize inheritance and strategic polymorphism to introduce new system features without altering proven, functional production code.
-*   **L - Liskov Substitution Principle (LSP):** *Derived classes must be completely substitutable for their base classes.* Subclasses must expand upon parent behavior without altering base structural rules or throwing unexpected exceptions (e.g., forcing a flightless bird to implement an unsupported `fly()` operation).
-*   **I - Interface Segregation Principle (ISP):** *Clients should not be forced to depend on interfaces they do not use.* Break bloated, multi-purpose interfaces down into lean, modular, single-capability contracts.
-*   **D - Dependency Inversion Principle (DIP):** *Depend upon abstractions, not concretions.* High-level architecture components should remain decoupled from underlying driver implementation rules via Constructor-driven Dependency Injection.
+```java
+// REFACTORED CLEAN DESIGN: Separation of entities and operations
+public class Invoice {
+    private double amount;
+    public Invoice(double amount) { this.amount = amount; }
+    public double getAmount() { return amount; }
+}
+
+public class InvoiceRepository {
+    public void saveToDatabase(Invoice invoice) {
+        System.out.println("Saving invoice worth $" + invoice.getAmount() + " to DB storage.");
+    }
+}
+```
+
+### O: Open/Closed Principle (OCP)
+> Systems must be open for structural extension, but closed to direct modifications of verified production logic.
+
+```java
+// Interface abstraction allows unlimited strategies without modifying calculator core
+public interface DiscountStrategy {
+    double apply(double amount);
+}
+
+public class RegularDiscount implements DiscountStrategy {
+    public double apply(double amount) { return amount * 0.9; }
+}
+
+public class VIPDiscount implements DiscountStrategy {
+    public double apply(double amount) { return amount * 0.8; }
+}
+
+public class DiscountCalculator {
+    public double calculate(DiscountStrategy strategy, double amount) {
+        return strategy.apply(amount); // Closed for modifications, completely open to extensions
+    }
+}
+```
+
+### L: Liskov Substitution Principle (LSP)
+> Subclasses must be completely substitutable for their parent classes without breaking application expectations or throwing unexpected exceptions.
+
+```java
+// REFACTORED CLEAN DESIGN: Split hierarchies to ensure semantic accuracy
+public class Bird {
+    public void eat() { System.out.println("Consuming organic energy inputs."); }
+}
+
+public class FlyingBird extends Bird {
+    public void fly() { System.out.println("Propelling through spatial coordinates."); }
+}
+
+public class Ostrich extends Bird {
+    // Avoids inheriting a broken fly() behavior that throws UnsupportedOperationException
+}
+```
+
+### I: Interface Segregation Principle (ISP)
+> Lean, role-specific interfaces are superior to broad, universal interfaces. Clients should never be forced to depend on methods they do not use.
+
+```java
+// Narrow, single-action utility boundaries
+public interface Printer { void print(); }
+public interface Scanner { void scan(); }
+
+public class SimplePrinter implements Printer {
+    public void print() { System.out.println("Rendering output pixels on paper."); }
+}
+
+public class MultifunctionOfficeHub implements Printer, Scanner {
+    public void print() { System.out.println("Printing documents."); }
+    public void scan() { System.out.println("Digitalizing physical inputs."); }
+}
+```
+
+### D: Dependency Inversion Principle (DIP)
+> High-level orchestration business logic must not depend on concrete low-level implementations; both must rely strictly on interfaces and abstractions.
+
+```java
+// Abstraction layer decouples dependencies
+public interface Engine { void start(); }
+
+public class ElectricEngine implements Engine {
+    public void start() { System.out.println("Generating rotational magnetic field flux."); }
+}
+
+public class Car {
+    private final Engine engine; // Dependent on the contract, not the detail
+
+    // Injected via Constructor Injection
+    public Car(Engine engine) {
+        this.engine = engine;
+    }
+
+    public void drive() { 
+        engine.start(); 
+    }
+}
+```
 
 ---
 
-## 🗄️ 3. Database Transactions: ACID vs. BASE
+## 💾 3. Database System Architecture (ACID vs. BASE)
 
-Evaluating state consistency mechanisms differs dramatically between centralized transactional systems and distributed environments.
+When evaluating persistence layer states across distributed environments, systems gravitate towards either tight compliance structures (**ACID**) or distributed, highly available configurations (**BASE**) in accordance with the **CAP Theorem** (Consistency, Availability, Partition Tolerance).
 
-### The ACID Model (Relational / SQL)
-ACID properties preserve strict, centralized accuracy across a logical block of work.
+### ACID Model (Pessimistic / Exact Processing)
+Optimized for transactional systems where transactional bugs cause systemic damage (e.g., financial networks).
+* **Atomicity:** All operations within a unit of work succeed together, or the database rolls back to its exact pre-transaction state.
+* **Consistency:** Data shifts safely between invariant states, satisfying all schema constraints, checks, and foreign keys.
+* **Isolation:** Concurrently executing transactions do not bleed intermediate states into each other. Supported by isolation configurations like Read Committed or Serializable.
+* **Durability:** Committed states are permanently flushed to non-volatile disk logs (Write-Ahead Logs) to withstand host system crashes.
 
-1.  **Atomicity:** "All or Nothing." If a single operation inside a compound transaction breaks, the runtime triggers a total database **rollback**, scrubbing partial updates.
-2.  **Consistency:** State transformations must transition the database from one valid structure to another, adhering precisely to defined schema constraints and triggers.
-3.  **Isolation:** Running parallel operations concurrently must yield results indistinguishable from sequential execution, governed by locking mechanisms or Multi-Version Concurrency Control (MVCC).
-4.  **Durability:** Committed transactions persist safely within non-volatile storage media (e.g., write-ahead log files) protected against unexpected OS crashes or power grid outages.
-
-### The CAP Theorem Constraint
-Distributed multi-node architectures must account for physical network partitions (**P**). Consequently, distributed engines must explicitly compromise between immediate **Consistency (C)** or total **Availability (A)** when nodes fail to communicate.
-
-### The BASE Model (Distributed / NoSQL)
-Distributed clusters optimize for scale and global runtime availability using a relaxed approach:
-*   **Basically Available (BA):** The store prioritizes returning a functional answer despite localized component outages or split network clusters.
-*   **Soft State (S):** Records shift over time independently of consumer interactions while multi-node replication events execute in the background.
-*   **Eventual Consistency (E):** Data replicas across disparate locations temporarily diverge but are guaranteed to synchronize to a singular baseline state once write activity quietens.
+### BASE Model (Optimistic / High Availability)
+Optimized for web-scale configurations where latency or system partitions cannot dictate total service outages (e.g., streaming platform metadata, social feeds).
+* **Basically Available (BA):** The persistence layer remains online and returns data from healthy nodes even amidst active infrastructure partitioning.
+* **Soft State (S):** State boundaries can fluctuate continuously without synchronous external interaction while nodes sync background state changes.
+* **Eventual Consistency (E):** The system completely unifies all state snapshots over asynchronous intervals, guaranteeing consistency *eventually* if no additional write inputs occur.
 
 ---
 
-## 🗃️ 4. Relational Database Normalization
+## 📐 4. Database Normalization (1NF ➡️ 2NF ➡️ 3NF)
 
-Normalization structures schemas systematically to isolate a single fact inside a unique record space, minimizing redundant values and stopping structural write defects.
+Normalization organizes database records to systematically eliminate data structural anomalies (Insertion, Update, Deletion anomalies) while enforcing the rule: *One fact in one place.*
 
-### Operational Anomalies
-*   **Update Anomaly:** Modifying a duplicated attribute requires scouring hundreds of individual records, increasing risk of contradictory data.
-*   **Insertion Anomaly:** New transactional categories cannot be entered into the platform unless attached to unrelated entity records.
-*   **Deletion Anomaly:** Removing a user profile inadvertently erases historical metadata because details are mixed together in a single table block.
+### First Normal Form (1NF)
+Every row must contain an immutable primary identity key, and every column cell must isolate completely atomic (indivisible), non-repeating data scalar values.
 
-### Progressive Normal Forms
-1.  **First Normal Form (1NF):** Every table cell must accommodate an atomic, non-divisible value. Multi-item arrays or comma-delimited strings are forbidden inside fields.
-2.  **Second Normal Form (2NF):** Satisfies 1NF, and all non-key parameters must display functional dependence upon the complete Primary Key (applies directly to composite keys).
-3.  **Third Normal Form (3NF):** Satisfies 2NF, and removes transitive dependencies (`Key -> Field_A -> Field_B`). Non-key columns cannot depend on fellow non-key columns.
+### Second Normal Form (2NF)
+The schema must meet 1NF criteria, and **all non-key column attributes must be fully functionally dependent on the entire primary key**. This eliminates partial key dependencies in composite key environments.
+
+### Third Normal Form (3NF)
+The schema must meet 2NF criteria, and **no non-key attribute can possess a transitive dependency on the primary identity key through an alternative non-key attribute**.
 
 ---
 
-## 🏗️ 5. Classic Design Patterns (Java Blueprint Summary)
+## 🎨 5. Structural Blueprints: Core Design Patterns
 
-Design patterns represent abstract archetypes for routing relationships and handling complex execution blocks.
+### 🏗️ Creational Patterns
 
-### Creational Family (Object Initialization)
-*   **Singleton:** Private constructor restrictions matching a static reference handle ensure exactly one object instance manages shared global resources (like database pools).
-*   **Factory Method:** Exposes an initialization method to callers while driving concrete subclass object selection dynamically away from the core execution space.
-*   **Builder:** Separates the construction steps of an object from its baseline instance properties, resolving bloated constructors with optional parameters through clear chainable APIs.
+#### 1. Singleton
+Ensures a single operational instance exists globally within runtime loops while maintaining an encapsulated structural access channel.
 
-### Structural Family (Component Composition)
-*   **Adapter:** Translates incompatible API signatures between legacy layers and new interfaces, wrapping objects seamlessly.
-*   **Decorator:** Inject and stack flexible behavioral alterations onto active object instances at runtime without subclass compilation overhead.
-*   **Facade:** Introduces a clean, unified high-level class interface that simplifies control over a complex maze of subsystems.
+```java
+public class DatabaseConnectionPool {
+    private static volatile DatabaseConnectionPool instance;
 
-### Behavioral Family (Inter-Object Communication)
-*   **Observer:** Configures a automated one-to-many subscription loop where state changes at a central object immediately push notifications out to registered observers.
-*   **Strategy:** Encapsulates various functional algorithms into modular classes, allowing them to swap seamlessly out at runtime.
-*   **Command:** Wraps an intent or explicit request inside an object shell, decoupling execution blocks from triggering components.
+    private DatabaseConnectionPool() {
+        // Enforce private boundary protection
+    }
+
+    public static DatabaseConnectionPool getInstance() {
+        if (instance == null) {
+            synchronized (DatabaseConnectionPool.class) {
+                if (instance == null) { // Double-checked locking paradigm
+                    instance = new DatabaseConnectionPool();
+                }
+            }
+        }
+        return instance;
+    }
+}
+```
+
+#### 2. Factory Method
+Defines an object-instantiation contract but moves the concrete creation routing to underlying execution context subclasses.
+
+```java
+interface Notification { void executeDispatch(); }
+
+class SMSNotification implements Notification {
+    public void executeDispatch() { System.out.println("Routing cellular carrier packet."); }
+}
+
+class EmailNotification implements Notification {
+    public void executeDispatch() { System.out.println("Processing SMTP transmission pipeline."); }
+}
+
+class NotificationFactory {
+    public Notification buildChannel(String contextToken) {
+        if (contextToken.equalsIgnoreCase("SMS")) return new SMSNotification();
+        if (contextToken.equalsIgnoreCase("EMAIL")) return new EmailNotification();
+        throw new IllegalArgumentException("Unknown channel token context.");
+    }
+}
+```
+
+#### 3. Builder
+Separates complex component orchestration from structural generation, allowing developers to safely construct intricate configurations step-by-step.
+
+```java
+public class NetworkRequest {
+    private final String url;
+    private final String method;
+    private final int timeout;
+
+    private NetworkRequest(Builder builder) {
+        this.url = builder.url;
+        this.method = builder.method;
+        this.timeout = builder.timeout;
+    }
+
+    public static class Builder {
+        private final String url; // Mandatory requirement
+        private String method = "GET"; // Default configuration option
+        private int timeout = 5000;
+
+        public Builder(String url) { this.url = url; }
+        public Builder withMethod(String method) { this.method = method; return this; }
+        public Builder withTimeout(int timeout) { this.timeout = timeout; return this; }
+        public NetworkRequest build() { return new NetworkRequest(this); }
+    }
+}
+```
+
+---
+
+### 🧱 Structural Patterns
+
+#### 1. Adapter
+Converts an unconventional or incompatible application programmatic contract interface into a structural signature signature expected by target components.
+
+```java
+interface TargetProtocol { void performModernRequest(); }
+
+class LegacySystem {
+    public void processOldExecutionFormat() { System.out.println("Handling raw string buffers."); }
+}
+
+class SystemAdapter implements TargetProtocol {
+    private final LegacySystem legacyService;
+    
+    public SystemAdapter(LegacySystem service) { this.legacyService = service; }
+    
+    @Override
+    public void performModernRequest() {
+        // Wraps legacy data logic into modern interface execution context
+        legacyService.processOldExecutionFormat();
+    }
+}
+```
+
+#### 2. Decorator
+Dynamically attaches new behaviors and features to an object at runtime without altering its underlying interface or structural definition.
+
+```java
+interface HTTPResponse { String writePayload(); }
+
+class BaseHTMLResponse implements HTTPResponse {
+    public String writePayload() { return "Raw HTML Data String"; }
+}
+
+abstract class ResponseDecorator implements HTTPResponse {
+    protected final HTTPResponse wrappedComponent;
+    public ResponseDecorator(HTTPResponse component) { this.wrappedComponent = component; }
+}
+
+class GZipCompressionDecorator extends ResponseDecorator {
+    public GZipCompressionDecorator(HTTPResponse component) { super(component); }
+    
+    @Override
+    public String writePayload() {
+        return "GZIP_COMPRESSED[" + wrappedComponent.writePayload() + "]";
+    }
+}
+```
+
+#### 3. Facade
+Synthesizes complex, tightly coupled low-level subsystem interfaces behind a single high-level unified interface layer.
+
+```java
+class StorageSubsystem { void initializeDisk() {} }
+class SecuritySubsystem { void configureAccessTokens() {} }
+
+public class CloudDeploymentFacade {
+    private final StorageSubsystem storage = new StorageSubsystem();
+    private final SecuritySubsystem security = new SecuritySubsystem();
+
+    public void launchCloudEnvironment() {
+        storage.initializeDisk();
+        security.configureAccessTokens();
+        System.out.println("Subsystems abstracted. Production environment safe and active.");
+    }
+}
+```
+
+---
+
+### ⚙️ Behavioral Patterns
+
+#### 1. Observer
+Builds subscription hooks allowing state modification actions within one runtime target to automatically publish updates to listening dependants.
+
+```java
+import java.util.*;
+
+interface Observer { void receiveNotification(String stateUpdate); }
+
+class CentralTelemetryService {
+    private final List<Observer> activeSubscribers = new ArrayList<>();
+    
+    public void attach(Observer observer) { activeSubscribers.add(observer); }
+    
+    public void broadcastTelemetry(String eventData) {
+        for (Observer sub : activeSubscribers) {
+            sub.receiveNotification(eventData);
+        }
+    }
+}
+```
+
+#### 2. Strategy
+Encapsulates a family of operational algorithms, rendering them entirely interchangeable at runtime inside host processes.
+
+```java
+interface SortingStrategy { void executeSort(int[] collection); }
+
+class QuickSortAlgorithm implements SortingStrategy {
+    public void executeSort(int[] collection) { /* High-performance processing logic */ }
+}
+
+class ContextExecutionManager {
+    private SortingStrategy currentStrategy;
+    
+    public void updateStrategy(SortingStrategy targetConfig) { this.currentStrategy = targetConfig; }
+    
+    public void processData(int[] dataset) {
+        currentStrategy.executeSort(dataset); // Strategy algorithm swapped fluidly at runtime
+    }
+}
+```
+
+#### 3. Command
+Encapsulates an explicit action or data operation inside an independent, structured command object, providing native capabilities for request queuing and transaction playbacks.
+
+```java
+interface TransactionCommand { void executeAction(); }
+
+class DatabaseBroker {
+    public void executeCommit() { System.out.println("Writing database commit state."); }
+}
+
+class CommitTransaction implements TransactionCommand {
+    private final DatabaseBroker dbBroker;
+    public CommitTransaction(DatabaseBroker broker) { this.dbBroker = broker; }
+    
+    public void executeAction() {
+        dbBroker.executeCommit();
+    }
+}
+
+class CommandInvokerPipeline {
+    private final List<TransactionCommand> commandLogQueue = new ArrayList<>();
+    
+    public void stageCommand(TransactionCommand dynamicCmd) {
+        commandLogQueue.add(dynamicCmd);
+    }
+    
+    public void processStagedPipelines() {
+        for (TransactionCommand cmd : commandLogQueue) {
+            cmd.executeAction();
+        }
+    }
+}
